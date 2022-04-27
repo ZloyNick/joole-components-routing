@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace joole\components\action;
+namespace joole\components\routing\action;
 
 use Closure;
 use joole\framework\controller\ControllerInterface;
