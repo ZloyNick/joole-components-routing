@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace joole\components\routing\router;
 
 use Closure;
-use joole\components\routing\BaseAction;
+use joole\components\action\BaseAction;
 use joole\framework\exception\component\ComponentException;
 use joole\framework\http\request\BaseUri;
 use joole\framework\http\response\BaseResponse;
