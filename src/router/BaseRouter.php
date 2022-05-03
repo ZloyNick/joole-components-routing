@@ -6,6 +6,7 @@ namespace joole\components\routing\router;
 
 use Closure;
 use joole\components\routing\action\BaseAction;
+use joole\components\routing\http\NotFoundException;
 use joole\framework\exception\component\ComponentException;
 use joole\framework\http\request\BaseUri;
 use joole\framework\http\response\BaseResponse;
@@ -39,8 +40,11 @@ class BaseRouter implements Router
         // TODO: Cache.
     }
 
-    public static function register(string $route, string $action, array|string|callable|Closure $callback): ?ActionInterface
-    {
+    public static function register(
+        string $route,
+        string $action,
+        array|string|callable|Closure $callback
+    ): ?ActionInterface{
         // Routes
         $routes = &self::$routes;
         // Actions
@@ -208,6 +212,8 @@ class BaseRouter implements Router
      *
      * @throws \ReflectionException
      * @throws \joole\framework\exception\component\ComponentException
+     * @throws NotFoundException
+     * @throws \joole\framework\exception\http\FileNotFoundException
      */
     final public function handleRequest(): BaseResponse
     {
@@ -215,6 +221,12 @@ class BaseRouter implements Router
         $requestUri = request()->getUri();
         // Action path.
         $action = $requestUri->getPath();
+
+        // File
+        if(is_file($filePath = getcwd().'/'.$action)){
+            return response()->asFile($filePath);
+        }
+
         // Action class and bound action params.
         [$action, $params] = self::getActionAndParams($action);
 
@@ -230,7 +242,7 @@ class BaseRouter implements Router
      * @param string $action Action.
      * @return array Array of runtime path and bound params.
      *
-     * @throws ComponentException
+     * @throws ComponentException|NotFoundException
      */
     private static function getActionAndParams(string $action): array
     {
@@ -259,6 +271,10 @@ class BaseRouter implements Router
         if ($lastKey === 0) {
             $mainAction = $actionParts[0];
 
+            if (!isset($actions[$mainAction])) {
+                throw new NotFoundException('Attempted to run undefined action "/' . $action . '"');
+            }
+
             return [$actions[$mainAction]['runtime.' . $mainAction], $params];
         }
 
@@ -283,6 +299,10 @@ class BaseRouter implements Router
                 }
             }
 
+            if (!isset($actions[$part])) {
+                throw new NotFoundException('Attempted to run undefined action "/' . $action . '"');
+            }
+
             // next child action
             $actions = $actions[$part];
 
@@ -290,7 +310,7 @@ class BaseRouter implements Router
             if ($lastKey === $key) {
                 // If runtime path not existing.
                 if (!isset($actions['runtime.' . $part])) {
-                    throw new ComponentException('Class of action "' . $action . '" not found!');
+                    throw new ComponentException('Runtime of action "' . $action . '" not found!');
                 }
 
                 // Returning runtime path and params from bind
@@ -299,6 +319,18 @@ class BaseRouter implements Router
         }
 
         throw new ComponentException('Class of action "' . $action . '" not found!');
+    }
+
+    /**
+     * Returns all routes.
+     *
+     * If your want get actions, use array_flip() function.
+     *
+     * @return array
+     */
+    public function getRoutes(): array
+    {
+        return self::$routes;
     }
 
 }
